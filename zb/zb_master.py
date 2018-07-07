@@ -4,7 +4,7 @@ import time
 import rlinetest
 import ReceiveV2
 import threading
-
+import binascii
 #myMAC = b'\xff\xff\xff\xff\xff\xff\xff\xff'
 myMAC = b'\x00\x13\xa2\x00\x40\xe7\x35\x3e'
 psk = 'HkdW54vs4FrSUSAA'
@@ -15,7 +15,7 @@ secret, nodeID = zb_HandshakeHub.zb_executeHandshake(myMAC,psk)
 ReceiveV2.setCreds(secret,nodeID)
 
 zb= zb_HandshakeHub.zb
-zbLock = threading.lock()
+zbLock = threading.Lock()
 
 def publish(packet):
 	eol = b'\r\n'
@@ -50,14 +50,16 @@ def Npull(dest,payload):
 
 def pull(dest,payload):
 	global zbLock
-	zbLock.aquire()
+	zbLock.acquire()
 	publish(clientEgress.clientEncapsulate(b'\x01',nodeID,dest,payload,secret))
 	reply = pullReceive()
 	if(reply==None):
 		print("pull request timed out")
 		zbLock.release()
 		return None
-	#zbLock.release()
+	print('pulled data is: ',int.from_bytes(reply, byteorder='big'))
+	zbLock.release()
+	#print('pulled payload is: ',payload)
 	return reply
 
 def pullReceive():
@@ -72,8 +74,9 @@ def pullReceive():
 		if not(buff==b''):
 			print('buff is',buff[:-2])
 			data = ReceiveV2.Receive(buff[:-2])
-			if(isMyPull(data)):
-				return data[:-2]
+			if(isMyPull(buff)):
+				return data
+				#return buff[:-2]
 		curTime = time.time()
 	return None
 
@@ -87,11 +90,15 @@ def recPackets():
 	print("zb_recPackets")
 	while True:
 		try:
-			zbLock.aquire()
+			zbLock.acquire()
 			data = rlinetest.newReadLine(zb,5)
 			if(data != b''):
 				ReceiveV2.Receive(data[:-2])
-			zbLock.release()	
+			zbLock.release()
+			#pass
+			#temp = b'\x00' # find a better delay
+			time.sleep(.5)
+			#print('')
 			#parsePacket = ReceiveV2.Receive(data)
 			#parsePacket = ReceiveV2.Receive(data[:-2], nodeID, secret)
 		except KeyboardInterrupt:
@@ -121,7 +128,7 @@ def terminal():
 			push(bytes([int(dest)]),payload.encode())
 
 		if(service =='pull'):
-			Zpull(bytes([int(dest)]),payload.encode())
+			pull(bytes([int(dest)]),payload.encode())
 
 t1 = threading.Thread(target=recPackets)
 t1.daemon = True

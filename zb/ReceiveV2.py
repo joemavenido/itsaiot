@@ -18,6 +18,8 @@ def Receive(packet):
 	if(header == b'\x01'):
 		parsePacket = parseService(packet)
 		if(parsePacket != 1 and HMACCheck(parsePacket)):
+			if(parsePacket['Type']==b'\x02'):
+				return parsePacket['Payload']
 			clientServ.service(parsePacket,secret)
 
 		# if not (parsePacket == 1):
