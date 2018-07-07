@@ -137,9 +137,9 @@ t1.start()
 t2 = threading.Thread(target = terminal)
 t2.start()
 
-# t3 = threading.Thread(target = hello)
-# t3.daemon = True
-# t3.start()
+t3 = threading.Thread(target = hello)
+t3.daemon = True
+t3.start()
 
 #push(b'\x03',b'lumos')
 #pull(b'\x03',b'lumos')
